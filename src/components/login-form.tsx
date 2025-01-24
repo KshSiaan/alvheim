@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -34,6 +35,7 @@ export function LoginForm({
 }: React.ComponentPropsWithoutRef<"div">) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const navig = useRouter();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -65,6 +67,7 @@ export function LoginForm({
         title: "Login Successful",
         description: "You have been successfully logged in.",
       });
+      navig.push("/feed");
       // Handle successful login (e.g., redirect, update state, etc.)
     } catch {
       toast({

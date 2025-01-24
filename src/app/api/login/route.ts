@@ -1,35 +1,53 @@
+import { type NextRequest, NextResponse } from "next/server";
+import { SignJWT } from "jose";
+import { createSecretKey } from "crypto";
+import bcrypt from "bcryptjs";
 import connectdb from "@/lib/db";
 import User from "@/model/userModel";
-// import { createSecretKey } from "crypto";
-// import { SignJWT } from "jose";
-// import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
-  const { fullName, email, password } = await request.json();
+  const { email, password } = await request.json();
 
-  await connectdb();
-
-  const checkUser = await User.findOne({ email: email });
-
-  if (checkUser) {
+  if (!email || !password) {
     return NextResponse.json(
-      { messsage: "This email already exist" },
-      { status: 500 }
+      { message: "Email and password are required" },
+      { status: 400 }
     );
-  } else {
-    //Create userData
+  }
 
-    const user = await User.create({ fullName, email, password });
+  try {
+    await connectdb();
 
-    //Create JWT token
+    const user = await User.findOne({ email });
 
+    if (!user) {
+      return NextResponse.json(
+        { message: "Invalid email or password" },
+        { status: 401 }
+      );
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return NextResponse.json(
+        { message: "Invalid email or password" },
+        { status: 401 }
+      );
+    }
+
+    // Update last login
+    user.last_login = new Date();
+    await user.save();
+
+    // Create JWT token
     const secretKey = createSecretKey("raven", "utf-8");
 
     const JWTData = {
       id: user._id,
-      fullName: user.fullName,
+      username: user.username,
       email: user.email,
-      isAdmin: user.isAdmin,
+      role: user.role,
     };
 
     const token = await new SignJWT(JWTData)
@@ -38,8 +56,28 @@ export async function POST(request: NextRequest) {
       .sign(secretKey);
 
     return NextResponse.json(
-      { message: "User created", user: user, token: token },
-      { status: 201 }
+      {
+        message: "Login successful",
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+        },
+        token: token,
+      },
+      {
+        status: 200,
+        headers: {
+          "Set-Cookie": `token=${token}; HttpOnly; Path=/; Max-Age=86400; SameSite=Strict`,
+        },
+      }
+    );
+  } catch (error) {
+    console.error("Login error:", error);
+    return NextResponse.json(
+      { message: "An error occurred during login" },
+      { status: 500 }
     );
   }
 }
