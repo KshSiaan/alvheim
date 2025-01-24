@@ -1,9 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { SignJWT } from "jose";
-import { createSecretKey } from "crypto";
 import bcrypt from "bcryptjs";
 import connectdb from "@/lib/db";
 import User from "@/model/userModel";
+
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET is not set in environment variables");
+}
 
 export async function POST(request: NextRequest) {
   const { email, password } = await request.json();
@@ -20,18 +25,9 @@ export async function POST(request: NextRequest) {
 
     const user = await User.findOne({ email });
 
-    if (!user) {
+    if (!user || !(await bcrypt.compare(password, user.password))) {
       return NextResponse.json(
-        { message: "Invalid email or password" },
-        { status: 401 }
-      );
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-
-    if (!isPasswordValid) {
-      return NextResponse.json(
-        { message: "Invalid email or password" },
+        { message: "Invalid credentials" },
         { status: 401 }
       );
     }
@@ -41,19 +37,15 @@ export async function POST(request: NextRequest) {
     await user.save();
 
     // Create JWT token
-    const secretKey = createSecretKey("raven", "utf-8");
-
-    const JWTData = {
+    const token = await new SignJWT({
       id: user._id,
       username: user.username,
       email: user.email,
       role: user.role,
-    };
-
-    const token = await new SignJWT(JWTData)
+    })
       .setProtectedHeader({ alg: "HS256" })
-      .setExpirationTime("1 day")
-      .sign(secretKey);
+      .setExpirationTime("1d")
+      .sign(new TextEncoder().encode(JWT_SECRET));
 
     return NextResponse.json(
       {
