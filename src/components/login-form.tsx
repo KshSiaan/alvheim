@@ -7,7 +7,6 @@ import * as z from "zod";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-// import { Label } from "@/components/ui/label";
 import {
   Form,
   FormControl,
@@ -36,7 +35,7 @@ export function LoginForm({
 }: React.ComponentPropsWithoutRef<"div">) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const navig = useRouter();
+  const router = useRouter();
   const [, setCookie] = useCookies(["token"]);
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -58,7 +57,8 @@ export function LoginForm({
       });
 
       if (!response.ok) {
-        throw new Error("Login failed");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Login failed");
       }
       const result = await response.json();
       setCookie("token", result.token);
@@ -67,12 +67,14 @@ export function LoginForm({
         title: "Login Successful",
         description: "You have been successfully logged in.",
       });
-      navig.push("/feed");
-      // Handle successful login (e.g., redirect, update state, etc.)
-    } catch {
+      router.push("/feed");
+    } catch (error) {
       toast({
         title: "Login Failed",
-        description: "There was an error logging in. Please try again.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "An error occurred during login. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -110,12 +112,12 @@ export function LoginForm({
               <FormItem>
                 <div className="flex items-center justify-between">
                   <FormLabel>Password</FormLabel>
-                  <a
-                    href="#"
+                  <Link
+                    href="/forgot-password"
                     className="text-sm underline-offset-4 hover:underline"
                   >
                     Forgot your password?
-                  </a>
+                  </Link>
                 </div>
                 <FormControl>
                   <Input type="password" {...field} />
@@ -131,7 +133,7 @@ export function LoginForm({
       </Form>
       <div className="text-center text-sm">
         Don&apos;t have an account?{" "}
-        <Link href="register" className="underline underline-offset-4">
+        <Link href="/register" className="underline underline-offset-4">
           Sign up
         </Link>
       </div>
