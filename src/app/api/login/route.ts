@@ -68,9 +68,6 @@ export async function POST(request: NextRequest) {
       },
       {
         status: 200,
-        headers: {
-          "Set-Cookie": `token=${token}; HttpOnly; Path=/; Max-Age=86400; SameSite=Strict`,
-        },
       }
     );
   } catch (error) {

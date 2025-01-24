@@ -19,6 +19,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useCookies } from "react-cookie";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -36,7 +37,7 @@ export function LoginForm({
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navig = useRouter();
-
+  const [, setCookie] = useCookies(["token"]);
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -59,9 +60,8 @@ export function LoginForm({
       if (!response.ok) {
         throw new Error("Login failed");
       }
-
       const result = await response.json();
-      console.log(result);
+      setCookie("token", result.token);
 
       toast({
         title: "Login Successful",
