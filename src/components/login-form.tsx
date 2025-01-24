@@ -48,7 +48,7 @@ export function LoginForm({
   async function onSubmit(data: LoginFormValues) {
     setIsLoading(true);
     try {
-      const response = await fetch("http://localhost:3000/api/login", {
+      const response = await fetch(`${window.location.origin}/api/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
